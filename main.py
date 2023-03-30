@@ -113,9 +113,7 @@ class LoginPage:
         button = self.driver.find_element(By.XPATH, '//*[@id="login_form"]/ul/li[3]/input')
         button.click()
 
-if __name__ == '__main__':
-    email = 'nadiatest1011@gmail.com'
-    password = 'Test1234!'
+if __name__ == '__main__':'
     folderNo = ''
 
     grupID = str(input("Group ID"))
