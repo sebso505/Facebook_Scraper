@@ -32,7 +32,8 @@ class GroupPage:
         mediaPhotos.click()
 
     def getImageURL(self):
-        image = self.driver.find_element(By.CLASS_NAME, 'x1bwycvy.x193iq5w.x4fas0m.x19kjcj4')
+        wait = WebDriverWait(self.driver, 10)
+        image = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, 'x1bwycvy.x193iq5w.x4fas0m.x19kjcj4')))
         imageURL = image.get_attribute('src')
         return imageURL
 
@@ -75,8 +76,8 @@ class fileManager:
                 print(f'created dir no: {numberWeShouldUse}')
                 return os.path.join(self.projectDir, str(numberWeShouldUse) + "_" + groupID)
 
-    def downloadImage(self, URL, location, imageNo):
-                imageTrueName = "/img" + str(imageNo) + ".png"
+    def downloadImage(self, URL, location, numberImage):
+                imageTrueName = "/img" + str(numberImage) + ".png"
                 # Open the url image, set stream to True, this will return the stream content.
                 r = requests.get(URL, stream=True)
                 # Check if the image was retrieved successfully
@@ -113,7 +114,9 @@ class LoginPage:
         button = self.driver.find_element(By.XPATH, '//*[@id="login_form"]/ul/li[3]/input')
         button.click()
 
-if __name__ == '__main__':'
+
+
+if __name__ == '__main__':
     folderNo = ''
 
     grupID = str(input("Group ID"))
@@ -130,28 +133,40 @@ if __name__ == '__main__':'
     time.sleep(1)
     imageNo = 0
     pageURL = scrapPage.getPageURL()
-
-    # use current driver url to check if current accesed file is video/picture, if not->skip.
-    if scrapPage.checkIfPhoto(str(pageURL)):
-        loopEndURL = scrapPage.getImageURL()
-        print(loopEndURL)
-        imageNo += 1
-        directory.downloadImage(loopEndURL, location, imageNo)
+    loopEndURL = ''
     current_url = ''
-    scrapPage.nextImagePage()
+    # use current driver url to check if current accesed file is video/picture, if not->skip.
+    functionResp = []
 
-    #while current_url is not loopEndURL:
-    for i in range(10):
+    def loopThroughGroupPhotos(currentPage,imageNr):
         time.sleep(1)
-        pageURL = scrapPage.getPageURL()
-        if scrapPage.checkIfPhoto(str(pageURL)):
-            current_url = scrapPage.getImageURL()
-            print(current_url)
-            imageNo += 1
-            directory.downloadImage(current_url, location, imageNo)
-        # import random to go to the next image on a random time period(.1,.2,.5,.7,.9)1 is too slow, 3600 images per hour.
+        url = ''
+        respList = []
+        if scrapPage.checkIfPhoto(str(currentPage)):
+            url = scrapPage.getImageURL()
+            respList.append(url)
+            if url == loopEndURL:
+                return 'loopCompleted'
+            imageNr += 1
+            print(url)
+            directory.downloadImage(url, location, imageNr)
         time.sleep(random.choice([.1, .2, .5, .7, .9]))
         scrapPage.nextImagePage()
+        respList.append(imageNr)
+        return respList
+
+
+    while not loopEndURL:
+        pageURL = scrapPage.getPageURL()
+        functionResp = loopThroughGroupPhotos(pageURL, imageNo)
+        loopEndURL = functionResp[0]
+        imageNo = functionResp[1]
+
+    while current_url != 'loopCompleted':
+        pageURL = scrapPage.getPageURL()
+        functionResp = loopThroughGroupPhotos(pageURL,imageNo)
+        current_url = functionResp[0]
+        imageNo = functionResp[1]
 
 # use mbasic version headless to see how many img are in the group and download images until target is met
 
