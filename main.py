@@ -8,7 +8,9 @@ import requests
 import shutil
 from selenium.webdriver.common.keys import Keys
 import random
+from playsound import playsound
 # import app
+
 
 class GroupPage:
     def __init__(self, groupID):
@@ -22,8 +24,8 @@ class GroupPage:
         self.driver.get("https://www.facebook.com/groups/" + self.userGroup + "/media/photos")
 
     def select_cookies(self):
-        wait = WebDriverWait(self.driver, 3)
-        cookie_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "div[aria-label='Only allow essential cookies']")))
+        wait = WebDriverWait(self.driver, 10)
+        cookie_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "div[aria-label='Decline optional cookies']")))
         cookie_button.click()
 
     def access_First_Image(self):
@@ -32,9 +34,14 @@ class GroupPage:
         mediaPhotos.click()
 
     def getImageURL(self):
-        wait = WebDriverWait(self.driver, 10)
+        wait = WebDriverWait(self.driver, 60)
         image = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, 'x1bwycvy.x193iq5w.x4fas0m.x19kjcj4')))
-        imageURL = image.get_attribute('src')
+        try:
+            imageURL = image.get_attribute('src')
+        except:
+            playsound('alarma.mp3')
+            time.sleep(500)
+            print("An exception occurred")
         return imageURL
 
     def nextImagePage(self):
@@ -48,12 +55,9 @@ class GroupPage:
         link = currentLink[:30]
         words = link.split('/')
         print(words)
-        if words[-1] == "photo":
-            return True
-        else:
-            return False
+        return words[-1] == "photo" + str(imageNo)
 
-class fileManager:
+class FileManager:
     def __init__(self,folderNo):
         self.projectDir = './imagesFolder'
         self.folderNo = folderNo
@@ -115,13 +119,14 @@ class LoginPage:
         button.click()
 
 
+lastURL = ''
 
 if __name__ == '__main__':
     folderNo = ''
 
     grupID = str(input("Group ID"))
 
-    directory = fileManager(folderNo)
+    directory = FileManager(folderNo)
     location = directory.makeDIR(grupID)
 
     scrapPage = GroupPage(grupID)
@@ -135,38 +140,40 @@ if __name__ == '__main__':
     pageURL = scrapPage.getPageURL()
     loopEndURL = ''
     current_url = ''
-    # use current driver url to check if current accesed file is video/picture, if not->skip.
-    functionResp = []
 
-    def loopThroughGroupPhotos(currentPage,imageNr):
-        time.sleep(1)
+    # use current driver url to check if current accesed file is video/picture, if not->skip.
+
+    def loopThroughGroupPhotos(currentPage):
+        #ad condition to wait until link has changed from line 152
         url = ''
-        respList = []
+        global lastURL
         if scrapPage.checkIfPhoto(str(currentPage)):
             url = scrapPage.getImageURL()
-            respList.append(url)
-            if url == loopEndURL:
+            if url == lastURL:
+                return ''
+            lastURL = url
+            if url == loopEndURL and url:
                 return 'loopCompleted'
-            imageNr += 1
             print(url)
-            directory.downloadImage(url, location, imageNr)
+            directory.downloadImage(url, location, imageNo)
         time.sleep(random.choice([.1, .2, .5, .7, .9]))
         scrapPage.nextImagePage()
-        respList.append(imageNr)
-        return respList
+        time.sleep(random.choice([.1, .2, .5, .7, .9]))
+        return url
 
 
     while not loopEndURL:
         pageURL = scrapPage.getPageURL()
-        functionResp = loopThroughGroupPhotos(pageURL, imageNo)
-        loopEndURL = functionResp[0]
-        imageNo = functionResp[1]
+        loopEndURL =  loopThroughGroupPhotos(pageURL)
+        imageNo += 1
 
     while current_url != 'loopCompleted':
         pageURL = scrapPage.getPageURL()
-        functionResp = loopThroughGroupPhotos(pageURL,imageNo)
-        current_url = functionResp[0]
-        imageNo = functionResp[1]
+        current_url = loopThroughGroupPhotos(pageURL)
+        if current_url == '':
+            continue
+        imageNo +=1
+        # LAST UPDATE 
 
 # use mbasic version headless to see how many img are in the group and download images until target is met
 
